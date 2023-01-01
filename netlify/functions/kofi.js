@@ -12,20 +12,21 @@ const webhook = new Webhook(webhook_url);
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-app.use('/', async function(req, res) {
+app.use('/', async function (req, res) {
 	const data = req.body.data;
-    if (!data) return res.json(`Hello world.`);
-    try {
-        const obj = JSON.parse(data);
-		if (obj.verification_token !== kofi_token) return res.json(`Invalid token provided.`);
-        const embed = new MessageBuilder();
+	if (!data) return res.json(`Hello world.`);
+	try {
+		const obj = JSON.parse(data);
+		if (obj.verification_token !== kofi_token)
+			return res.json(`Invalid token provided.`);
+		const embed = new MessageBuilder();
 
 		embed.setAuthor('Ko-fi', 'https://i.imgur.com/J0egcX2.png');
 		embed.setThumbnail('https://i.imgur.com/J0egcX2.png');
-        embed.setTitle('New supporter on Ko-fi ☕');
+		embed.setTitle('New supporter on Ko-fi ☕');
 		if (!kofi_username) embed.setURL(`https://ko-fi.com/${kofi_username}`);
 
-		switch(obj.tier_name) {
+		switch (obj.tier_name) {
 			case 'Silver':
 				embed.setColor('#797979');
 			case 'Gold:':
@@ -36,19 +37,23 @@ app.use('/', async function(req, res) {
 				embed.setColor('#9b59b6');
 		}
 
-        embed.addField(`From`, `${obj.from_name}`, true);
+		embed.addField(`From`, `${obj.from_name}`, true);
 		embed.addField(`Type`, `${obj.type}`, true);
-        embed.addField(`Amount`, `${obj.amount} ${obj.currency}`, true);
-        if (obj.message && obj.message !== 'null') embed.addField(`Message`, `${obj.message}`);
-		embed.setFooter(`Thank you for supporting us!`, `https://i.imgur.com/J0egcX2.png`);
-        embed.setTimestamp();
+		embed.addField(`Amount`, `${obj.amount} ${obj.currency}`, true);
+		if (obj.message && obj.message !== 'null')
+			embed.addField(`Message`, `${obj.message}`);
+		embed.setFooter(
+			`Thank you for supporting us!`,
+			`https://i.imgur.com/J0egcX2.png`
+		);
+		embed.setTimestamp();
 
-        await webhook.send(embed);
-    } catch (err) {
-        console.error(err);
-        return res.json({success: false, error: err});
-    }
-    return res.json({success: true});
+		await webhook.send(embed);
+	} catch (err) {
+		console.error(err);
+		return res.json({ success: false, error: err });
+	}
+	return res.json({ success: true });
 });
 
 module.exports.handler = serverless(app);
