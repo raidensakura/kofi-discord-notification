@@ -1,3 +1,4 @@
 [template.environment]
-  WEBHOOK_LINK = "change me for your secret token"
-  KOFI_TOKEN = "set the url to your custom logo here"
+  WEBHOOK_URL = "Paste your webhook link here"
+  KOFI_TOKEN = "Paste your Ko-fi token here"
+  KOFI_USERNAME = "Enter your Ko-fi username here"
