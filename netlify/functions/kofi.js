@@ -15,6 +15,8 @@ app.use(bodyParser.json());
 app.use('/', async function (req, res) {
 	const data = req.body.data;
 	if (!data) return res.json(`Hello world.`);
+	if (!webhook_url) return res.json(`No Webhook URL provided.`);
+	if (!kofi_token) return res.json(`No Ko-fi token provided.`);
 	try {
 		const obj = JSON.parse(data);
 		if (obj.verification_token !== kofi_token)
