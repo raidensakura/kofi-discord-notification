@@ -24,7 +24,7 @@ You can also deploy this simple script on an already existing Netlify website if
 ## Where?
 - Discord Webhook URL (Under channel settings):<br><br>![image](https://user-images.githubusercontent.com/38610216/210170804-02a5a3fe-b3db-4cca-b006-201bbe0fa518.png)
 
-- Ko-fi Token (Under advanced):<br><br>![Screenshot 2023-01-01 204241](https://user-images.githubusercontent.com/38610216/210170905-0e274abc-74f4-46ee-9e3b-cd87a5cadcdf.png)
+- [Ko-fi Token](https://ko-fi.com/manage/webhooks?src=sidemenu) (Under advanced):<br><br>![Screenshot 2023-01-01 204241](https://user-images.githubusercontent.com/38610216/210170905-0e274abc-74f4-46ee-9e3b-cd87a5cadcdf.png)
 
 ## Help
 Feel free to reach out to me on [Discord](https://dsc.gg/transience) or [Create an issue](https://github.com/raidensakura/kofi-discord-notification/issues/new)
