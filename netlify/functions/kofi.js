@@ -4,19 +4,19 @@ const serverless = require('serverless-http');
 const app = express();
 const bodyParser = require('body-parser');
 const { Webhook, MessageBuilder } = require('discord-webhook-node');
-const webhook_url = process.env.WEBHOOK_URL;
-const kofi_token = process.env.KOFI_TOKEN;
-const kofi_username = process.env.KOFI_USERNAME;
-const webhook = new Webhook(webhook_url);
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use('/', async function (req, res) {
-	const data = req.body;
+	const data = req.body.data;
 	if (!data) return res.json(`Hello world.`);
-	if (!webhook_url) return res.json(`No Webhook URL provided.`);
-	if (!kofi_token) return res.json(`No Ko-fi token provided.`);
+	const webhook_url = process.env.WEBHOOK_URL;
+	if (!webhook_url) return console.log(`No Webhook URL provided.`);
+	const kofi_token = process.env.KOFI_TOKEN;
+	if (!kofi_token) return console.log(`No Ko-fi token provided.`);
+	const kofi_username = process.env.KOFI_USERNAME;
+	const webhook = new Webhook(webhook_url);
 	try {
 		const obj = JSON.parse(data);
 		if (obj.verification_token !== kofi_token)
