@@ -163,11 +163,10 @@ app.use('/', async function (req, res) {
 				}
 			})
 			if (res.status == 200) {
-				logger.info(`Updated gist for payload ${payload.message_id}.`);
+				return logger.info(`Updated gist for payload ${payload.message_id}.`);
 			} else {
-				logger.error(`Failed to update gist: ${res.status}`)
+				return logger.error(`Failed to update gist: ${res.status}`)
 			}
-
 		} else {
 			return logger.error('Could not find your Gist ID from your Gist URL.');
 		}
