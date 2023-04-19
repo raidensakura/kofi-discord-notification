@@ -110,25 +110,28 @@ app.use('/', async function (req, res) {
 
 		await webhook.send(embed);
 	} catch (err) {
-		console.error(err);
+		logger.error(err);
 		return res.json({ success: false, error: err });
 	}
 
 	logger.info(`Processed payload ${payload.message_id}.`);
 
-	res.json({ success: true });
-
 	// Return early if gist stuff not provided
-	if (!gist_url || !gist_token) return logger.info(`Skipping gist update.`);
+	if (!gist_url || !gist_token) {
+		logger.info(`Skipping gist update.`);
+		return res.json({ success: true });
+	}
 
 	// Request for gist content
 	request(gist_url, { json: true }, async (error, resp, body) => {
 		if (error) {
-			return logger.error(`Problem retrieving gist content: \n${error}`);
+			logger.error(`Problem retrieving gist content: \n${error}`);
+			return res.json({ success: false, error: error });
 		};
 
 		if (resp.statusCode == 404) {
-			return logger.error(`Problem retrieving gist: Not found.`);
+			logger.error(`Problem retrieving gist: Not found.`);
+			return res.json({ success: false, error: 'Gist not found.' });
 		}
 
 		let supporters = body || [];
@@ -137,7 +140,8 @@ app.use('/', async function (req, res) {
 			try {
 				supporters.push(payload);
 			} catch (error) {
-				return logger.error(`Problem retrieving gist: ${error}.`);
+				logger.error(`Problem retrieving gist: ${error}.`);
+				return res.json({ success: false, error: error });
 			}
 		};
 
@@ -153,7 +157,7 @@ app.use('/', async function (req, res) {
 
 		if (match) {
 			const gistId = match[1];
-			let res = await octokit.request(`PATCH /gists/${gistId}`, {
+			let gist_res = await octokit.request(`PATCH /gists/${gistId}`, {
 				gist_id: gistId,
 				description: `Last updated at ${Date.now()}`,
 				files: {
@@ -165,13 +169,16 @@ app.use('/', async function (req, res) {
 					'X-GitHub-Api-Version': '2022-11-28'
 				}
 			})
-			if (res.status == 200) {
-				return logger.info(`Updated gist for payload ${payload.message_id}.`);
+			if (gist_res.status == 200) {
+				logger.info(`Updated gist for payload ${payload.message_id}.`);
+				return res.json({ success: true });
 			} else {
-				return logger.error(`Failed to update gist: ${res.status}`)
+				logger.error(`Failed to update gist: ${res.status}`)
+				return res.json({ success: false, error: `Update gist failed: ${res.status}` });
 			}
 		} else {
-			return logger.error('Could not find your Gist ID from your Gist URL.');
+			logger.error('Could not find your Gist ID from your Gist URL.');
+			return res.json({ success: false, error: 'Could not get Gist ID from URL.' });
 		}
 	}
 });
