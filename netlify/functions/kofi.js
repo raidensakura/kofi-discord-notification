@@ -72,7 +72,7 @@ app.use('/', async function (req, res) {
 		payload['verification_token'] = censor;
 		payload['email'] = censor;
 		payload['kofi_transaction_id'] = censor;
-		payload['shipping'] = censor;
+		payload['shipping'] = null;
 	} catch {
 		return res.json({ success: false, error: 'Payload data invalid.' });
 	}
@@ -157,9 +157,12 @@ app.use('/', async function (req, res) {
 
 		if (match) {
 			const gistId = match[1];
+			const timestamp = Date.now();
+			const dateObj = new Date(timestamp);
+			const dateString = dateObj.toLocaleString();
 			let gist_res = await octokit.request(`PATCH /gists/${gistId}`, {
 				gist_id: gistId,
-				description: `Last updated at ${Date.now()}`,
+				description: `Last updated at ${dateString}`,
 				files: {
 					'kofi.json': {
 						content: JSON.stringify(supporters)
