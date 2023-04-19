@@ -49,6 +49,13 @@ app.use('/', async function (req, res) {
 
 	const webhook = new Webhook(webhook_url);
 
+	const gist_url = process.env.GIST_URL;
+	const gist_token = process.env.GIST_TOKEN;
+
+	const octokit = new Octokit({
+		auth: gist_token
+	})
+
 	// Check if payload data is valid
 	const data = req.body.data;
 	if (!data) return res.json(`Hello world.`);
@@ -112,10 +119,10 @@ app.use('/', async function (req, res) {
 	res.json({ success: true });
 
 	// Return early if gist stuff not provided
-	if (!process.env.GIST_URL || !process.env.GIST_TOKEN) return;
+	if (!gist_url || !gist_token) return logger.info(`Skipping gist update.`);
 
 	// Request for gist content
-	request(process.env.GIST_URL, { json: true }, async (error, resp, body) => {
+	request(gist_url, { json: true }, async (error, resp, body) => {
 		if (error) {
 			return logger.error(`Problem retrieving gist content: \n${error}`);
 		};
@@ -138,12 +145,8 @@ app.use('/', async function (req, res) {
 	});
 
 	async function updateGist(supporters) {
-		const octokit = new Octokit({
-			auth: process.env.GIST_TOKEN
-		})
-
 		// Thanks ChatGPT
-		const url = process.env.GIST_URL;
+		const url = gist_url;
 		const regex = /\/([\da-f]+)\/raw\//;
 
 		const match = url.match(regex);
