@@ -1,4 +1,9 @@
 [template.environment]
-  WEBHOOK_URL = "Paste your webhook link here"
+  WEBHOOK_URL = "Paste your webhook URL here"
   KOFI_TOKEN = "Paste your Ko-fi token here"
   KOFI_USERNAME = "Enter your Ko-fi username here"
+  GIST_TOKEN = "Paste your Gist token here"
+  GIST_URL = "Paste your Gist URL here"
+
+[build]
+  functionsSource = "netlify/functions/"

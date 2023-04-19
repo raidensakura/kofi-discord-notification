@@ -1,1 +1,26 @@
-node_modules
+# Directories
+node_modules/
+dist/
+coverage/
+
+# Files
+.env
+.env.local
+.env.test
+.env.development.local
+.env.production.local
+*.log
+*.pid
+
+# IDE
+.vscode/
+
+# Dependency directories
+.pnpm-store/
+.yarn/
+
+# Others
+*.DS_Store
+Thumbs.db
+.netlify/
+*.zip
