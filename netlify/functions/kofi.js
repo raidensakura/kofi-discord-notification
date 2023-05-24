@@ -104,7 +104,7 @@ app.use('/', async function (req, res) {
 			embed.addField(`Message`, `${payload.message}`);
 		embed.setFooter(
 			`Thank you for supporting us!`,
-			`https://i.imgur.com/J0egcX2.png`
+			`https://github.githubassets.com/images/modules/site/icons/funding_platforms/ko_fi.svg`
 		);
 		embed.setTimestamp();
 
