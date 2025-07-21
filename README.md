@@ -1,4 +1,4 @@
-# kofi-discord-notification [![Netlify Status](https://api.netlify.com/api/v1/badges/028bea5f-00d6-4679-bbff-456f4251e01d/deploy-status)](https://app.netlify.com/sites/kofi-discord-notification/deploys)
+# kofi-discord-notification
 Serverless Express app running on Netlify functions to send Ko-fi notification to Discord.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/P5P6D65UW)
