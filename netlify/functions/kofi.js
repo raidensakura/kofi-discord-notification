@@ -1,190 +1,233 @@
-// Modified from: https://github.com/eramsorgr/kofi-discord-alerts
-const express = require('express');
-const serverless = require('serverless-http');
-const app = express();
-const bodyParser = require('body-parser');
 const { Webhook, MessageBuilder } = require('discord-webhook-node');
-const request = require('request');
-const URL = require("url").URL;
-const { Octokit } = require("@octokit/core");
-const { createLogger, format, transports } = require("winston");
+const { Octokit } = require('@octokit/core');
+const { URL } = require('url');
 
-const logLevels = {
-	fatal: 0,
-	error: 1,
-	warn: 2,
-	info: 3,
-	debug: 4,
-	trace: 5,
+const HEADERS = { 'Content-Type': 'application/json' };
+
+const jsonResponse = (body, status = 200) => ({ statusCode: status, headers: HEADERS, body: JSON.stringify(body) });
+
+const isValidUrl = (value) => {
+	try {
+		new URL(value);
+		return true;
+	} catch {
+		return false;
+	}
 };
 
-const logger = createLogger({
-	levels: logLevels,
-	transports: [new transports.Console()],
-});
+const safeString = (value) => {
+	if (value == null) return '';
+	return String(value).trim();
+};
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+const cleanPayload = (payload) => {
+	const sanitized = { ...payload };
+	delete sanitized.verification_token;
+	delete sanitized.email;
+	delete sanitized.kofi_transaction_id;
+	delete sanitized.shipping;
+	return sanitized;
+};
 
-app.use('/', async function (req, res) {
-
-	// Check for needed secrets
-	const stringIsAValidUrl = (s) => {
-		try {
-			new URL(s);
-			return true;
-		} catch (err) {
-			return false;
-		}
-	};
-	const webhook_url = process.env.WEBHOOK_URL;
-	if (!webhook_url || !stringIsAValidUrl(webhook_url)) {
-		return res.json({ success: false, error: 'Invalid Webhook URL.' });
-	}
-
-	const kofi_token = process.env.KOFI_TOKEN;
-	if (!kofi_token) return res.json({ success: false, error: 'Ko-fi token required.' });
-
-	const kofi_username = process.env.KOFI_USERNAME;
-
-	const webhook = new Webhook(webhook_url);
-
-	const gist_url = process.env.GIST_URL;
-	const gist_token = process.env.GIST_TOKEN;
-
-	const octokit = new Octokit({
-		auth: gist_token
-	})
-
-	// Check if payload data is valid
-	const data = req.body.data;
-	if (!data) return res.json(`Hello world.`);
-	const payload = JSON.parse(data);
-
-	// Check if kofi token is valid
-	if (payload.verification_token !== kofi_token) {
-		return res.json({ success: false, error: 'Ko-fi token does not match.' });
-	}
-
-	// Strip sensitive info from payload
+const getGistId = (gistUrl) => {
 	try {
-		censor = '*****';
-		payload['verification_token'] = censor;
-		payload['email'] = censor;
-		payload['kofi_transaction_id'] = censor;
-		payload['shipping'] = null;
+		const parsed = new URL(gistUrl);
+		const match = parsed.pathname.match(/\/(?<id>[0-9a-fA-F]+)(?:\/?|$)/);
+		return match?.groups?.id || null;
 	} catch {
-		return res.json({ success: false, error: 'Payload data invalid.' });
+		return null;
+	}
+};
+
+const buildEmbed = (payload, username) => {
+	const embed = new MessageBuilder();
+
+	// Color palette by type
+	const typeColors = {
+		tip: '#9b59b6',
+		subscription: '#16a085',
+		commission: '#e67e22',
+		'shop order': '#2ecc71',
+	};
+
+	const koFiAuthorIcon = 'https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a01229bf8a18f97a3c1_favion.png';
+	const koFiThumbnail = 'https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a0172b90570b1c21dab_kofi_logo.png';
+	embed.setAuthor('Ko-fi', koFiAuthorIcon);
+	embed.setThumbnail(koFiThumbnail);
+
+	const typeRaw = safeString(payload.type).toLowerCase();
+	const isPublic = payload.hasOwnProperty('is_public') ? Boolean(payload.is_public) : true;
+	const fromName = isPublic ? (safeString(payload.from_name) || 'Anonymous') : 'Private supporter';
+
+	// Set title and color based on type
+	let title = 'New Ko-fi support';
+	let color = '#34495e';
+
+	if (payload.is_subscription_payment) {
+		color = typeColors.subscription;
+		title = payload.is_first_subscription_payment
+			? '🆕 New membership (first payment)'
+			: '💚 Subscription payment received';
+	} else if (typeRaw.includes('tip')) {
+		color = typeColors.tip;
+		title = '💜 New tip received';
+	} else if (typeRaw.includes('commission')) {
+		color = typeColors.commission;
+		title = '🎨 New commission received';
+	} else if (typeRaw.includes('shop')) {
+		color = typeColors['shop order'];
+		title = '🛍️ New shop order';
 	}
 
-	// Send Discord embed
+	embed.setTitle(title);
+	if (safeString(username)) {
+		embed.setURL(`https://ko-fi.com/${encodeURIComponent(username)}`);
+	}
+	embed.setColor(color);
+
+	// Always include basic info
+	embed.addField('From', fromName, true);
+	embed.addField('Type', safeString(payload.type) || 'Unknown', true);
+	embed.addField('Amount', `${safeString(payload.amount) || '0'} ${safeString(payload.currency) || ''}`.trim(), true);
+
+	// Subscription fields
+	if (payload.is_subscription_payment) {
+		if (safeString(payload.tier_name)) {
+			embed.addField('Tier', `${payload.tier_name}`, true);
+		}
+		embed.addField('Status', payload.is_first_subscription_payment ? 'Welcome! 🎉' : 'Monthly', true);
+	}
+
+	// Shop order items
+	if (Array.isArray(payload.shop_items) && payload.shop_items.length > 0) {
+		const itemsList = payload.shop_items.map((item) => {
+			const name = safeString(item.direct_link_code ? `${item.direct_link_code}` : item.name || 'Item');
+			const qty = item.quantity || 1;
+			return `• ${name} (x${qty})`;
+		}).join('\n');
+		embed.addField('Items', itemsList, false);
+	}
+
+	// Message field (respect privacy)
+	const message = safeString(payload.message);
+	if (isPublic && message && message.toLowerCase() !== 'null') {
+		embed.addField('Message', `"${message}"`);
+	} else if (!isPublic && message) {
+		embed.addField('Message', '🔒 Private message');
+	}
+
+	// Footer
+	embed.setFooter('Thank you for supporting us!', koFiAuthorIcon);
+	embed.setTimestamp();
+
+	return embed;
+};
+
+exports.handler = async (event) => {
+	if (event.httpMethod !== 'POST') {
+		return jsonResponse({ success: false, error: 'Only POST requests are supported.' }, 405);
+	}
+
+	const webhookUrl = process.env.WEBHOOK_URL;
+	const kofiToken = process.env.KOFI_TOKEN;
+	const kofiUsername = process.env.KOFI_USERNAME;
+	const gistUrl = process.env.GIST_URL;
+	const gistToken = process.env.GIST_TOKEN;
+
+	if (!webhookUrl || !isValidUrl(webhookUrl)) {
+		return jsonResponse({ success: false, error: 'Invalid WEBHOOK_URL.' }, 500);
+	}
+
+	if (!kofiToken) {
+		return jsonResponse({ success: false, error: 'Missing KOFI_TOKEN.' }, 500);
+	}
+
+	// Parse form-encoded body from Ko-fi
+	let body;
+	const contentType = event.headers['content-type'] || '';
+
+	if (contentType.includes('application/x-www-form-urlencoded')) {
+		// Parse URL-encoded form data
+		const params = new URLSearchParams(event.body);
+		body = {
+			data: params.get('data'),
+		};
+	} else {
+		// Fallback to JSON parsing
+		try {
+			body = JSON.parse(event.body || '{}');
+		} catch (error) {
+			return jsonResponse({ success: false, error: 'Request body is not valid.' }, 400);
+		}
+	}
+
+	if (!body.data) {
+		return jsonResponse({ success: true, message: 'Ko-fi webhook listener is alive.' });
+	}
+
+	let payload;
 	try {
-		const embed = new MessageBuilder();
+		payload = typeof body.data === 'string' ? JSON.parse(body.data) : body.data;
+	} catch (error) {
+		return jsonResponse({ success: false, error: 'Invalid Ko-fi payload data.' }, 400);
+	}
 
-		embed.setAuthor('Ko-fi', 'https://i.imgur.com/J0egcX2.png');
-		embed.setThumbnail('https://i.imgur.com/J0egcX2.png');
-		embed.setTitle('New supporter on Ko-fi ☕');
-		if (kofi_username) embed.setURL(`https://ko-fi.com/${kofi_username}`);
+	if (payload.verification_token !== kofiToken) {
+		return jsonResponse({ success: false, error: 'Ko-fi token does not match.' }, 401);
+	}
 
-		switch (payload.tier_name) {
-			case 'Silver':
-				embed.setColor('#797979');
-			case 'Gold:':
-				embed.setColor('#ffc530');
-			case 'Platinum':
-				embed.setColor('#2ed5ff');
-			default:
-				embed.setColor('#9b59b6');
-		}
+	const webhook = new Webhook(webhookUrl);
+	const embed = buildEmbed(payload, kofiUsername);
 
-		embed.addField(`From`, `${payload.from_name}`, true);
-		embed.addField(`Type`, `${payload.type}`, true);
-		embed.addField(`Amount`, `${payload.amount} ${payload.currency}`, true);
-		if (payload.message && payload.message !== 'null')
-			embed.addField(`Message`, `${payload.message}`);
-		embed.setFooter(
-			`Thank you for supporting us!`,
-			`https://github.githubassets.com/images/modules/site/icons/funding_platforms/ko_fi.svg`
-		);
-		embed.setTimestamp();
-
+	try {
 		await webhook.send(embed);
-	} catch (err) {
-		logger.error(err);
-		return res.json({ success: false, error: err });
+	} catch (error) {
+		console.error('Discord webhook send failed:', error);
+		return jsonResponse({ success: false, error: 'Discord delivery failed.' }, 502);
 	}
 
-	logger.info(`Processed payload ${payload.message_id}.`);
-
-	// Return early if gist stuff not provided
-	if (!gist_url || !gist_token) {
-		logger.info(`Skipping gist update.`);
-		return res.json({ success: true });
+	if (!gistUrl || !gistToken) {
+		return jsonResponse({ success: true });
 	}
 
-	// Request for gist content
-	request(gist_url, { json: true }, async (error, resp, body) => {
-		if (error) {
-			logger.error(`Problem retrieving gist content: \n${error}`);
-			return res.json({ success: false, error: error });
-		};
+	const gistId = getGistId(gistUrl);
+	if (!gistId) {
+		return jsonResponse({ success: false, error: 'Invalid GIST_URL.' }, 400);
+	}
 
-		if (resp.statusCode == 404) {
-			logger.error(`Problem retrieving gist: Not found.`);
-			return res.json({ success: false, error: 'Gist not found.' });
+	const octokit = new Octokit({ auth: gistToken });
+	let supporters = [];
+
+	try {
+		const gistResponse = await octokit.request('GET /gists/{gist_id}', { gist_id: gistId });
+		const gistFile = gistResponse.data.files?.['kofi.json'];
+
+		if (gistFile && typeof gistFile.content === 'string' && gistFile.content.trim()) {
+			supporters = JSON.parse(gistFile.content);
+			if (!Array.isArray(supporters)) supporters = [];
 		}
+	} catch (error) {
+		console.error('Unable to read Gist:', error);
+		return jsonResponse({ success: false, error: 'Unable to retrieve Gist content.' }, 502);
+	}
 
-		let supporters = body || [];
+	supporters.push(cleanPayload(payload));
 
-		if (!error && resp.statusCode == 200) {
-			try {
-				supporters.push(payload);
-			} catch (error) {
-				logger.error(`Problem retrieving gist: ${error}.`);
-				return res.json({ success: false, error: error });
-			}
-		};
-
-		return await updateGist(supporters);
-	});
-
-	async function updateGist(supporters) {
-		// Thanks ChatGPT
-		const url = gist_url;
-		const regex = /\/([\da-f]+)\/raw\//;
-
-		const match = url.match(regex);
-
-		if (match) {
-			const gistId = match[1];
-			const timestamp = Date.now();
-			const dateObj = new Date(timestamp);
-			const dateString = dateObj.toLocaleString();
-			let gist_res = await octokit.request(`PATCH /gists/${gistId}`, {
-				gist_id: gistId,
-				description: `Last updated at ${dateString}`,
-				files: {
-					'kofi.json': {
-						content: JSON.stringify(supporters)
-					}
+	try {
+		await octokit.request('PATCH /gists/{gist_id}', {
+			gist_id: gistId,
+			description: `Updated ${new Date().toISOString()}`,
+			files: {
+				'kofi.json': {
+					content: JSON.stringify(supporters, null, 2),
 				},
-				headers: {
-					'X-GitHub-Api-Version': '2022-11-28'
-				}
-			})
-			if (gist_res.status == 200) {
-				logger.info(`Updated gist for payload ${payload.message_id}.`);
-				return res.json({ success: true });
-			} else {
-				logger.error(`Failed to update gist: ${res.status}`)
-				return res.json({ success: false, error: `Update gist failed: ${res.status}` });
-			}
-		} else {
-			logger.error('Could not find your Gist ID from your Gist URL.');
-			return res.json({ success: false, error: 'Could not get Gist ID from URL.' });
-		}
+			},
+		});
+	} catch (error) {
+		console.error('Unable to update Gist:', error);
+		return jsonResponse({ success: false, error: 'Unable to update Gist.' }, 502);
 	}
-});
 
-module.exports.handler = serverless(app);
+	return jsonResponse({ success: true });
+};
 
