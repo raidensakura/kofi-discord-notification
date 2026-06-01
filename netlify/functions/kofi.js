@@ -116,9 +116,8 @@ const buildEmbed = (payload, username) => {
 		embed.addField('Message', '🔒 Private message');
 	}
 
-	// Footer with message ID for tracing
-	const footerText = payload.message_id ? `ID: ${payload.message_id}` : 'Ko-fi notification';
-	embed.setFooter(`Thank you for supporting us! • ${footerText}`, koFiAuthorIcon);
+	// Footer
+	embed.setFooter('Thank you for supporting us!', koFiAuthorIcon);
 	embed.setTimestamp();
 
 	return embed;
