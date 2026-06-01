@@ -50,9 +50,10 @@ const buildEmbed = (payload, username) => {
 		'shop order': '#2ecc71',
 	};
 
-	const koFiIcon = 'https://github.githubassets.com/images/modules/site/icons/funding_platforms/ko_fi.svg';
-	embed.setAuthor('Ko-fi', koFiIcon);
-	embed.setThumbnail(koFiIcon);
+	const koFiAuthorIcon = 'https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a01229bf8a18f97a3c1_favion.png';
+	const koFiThumbnail = 'https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a0172b90570b1c21dab_kofi_logo.png';
+	embed.setAuthor('Ko-fi', koFiAuthorIcon);
+	embed.setThumbnail(koFiThumbnail);
 
 	const typeRaw = safeString(payload.type).toLowerCase();
 	const isPublic = payload.hasOwnProperty('is_public') ? Boolean(payload.is_public) : true;
@@ -117,7 +118,7 @@ const buildEmbed = (payload, username) => {
 
 	// Footer with message ID for tracing
 	const footerText = payload.message_id ? `ID: ${payload.message_id}` : 'Ko-fi notification';
-	embed.setFooter(`Thank you for supporting us! • ${footerText}`, koFiIcon);
+	embed.setFooter(`Thank you for supporting us! • ${footerText}`, koFiAuthorIcon);
 	embed.setTimestamp();
 
 	return embed;
