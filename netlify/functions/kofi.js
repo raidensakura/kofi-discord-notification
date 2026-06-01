@@ -47,8 +47,10 @@ const buildEmbed = (payload, username) => {
 		Platinum: '#2ed5ff',
 	};
 
-	embed.setAuthor('Ko-fi', 'https://i.imgur.com/J0egcX2.png');
-	embed.setThumbnail('https://i.imgur.com/J0egcX2.png');
+	// Use GitHub-hosted Ko-fi icon (more reliable than third-party Imgur link)
+	const koFiIcon = 'https://github.githubassets.com/images/modules/site/icons/funding_platforms/ko_fi.svg';
+	embed.setAuthor('Ko-fi', koFiIcon);
+	embed.setThumbnail(koFiIcon);
 	embed.setTitle('New Ko-fi support');
 
 	if (safeString(username)) {
