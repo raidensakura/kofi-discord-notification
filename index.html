@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ko-fi Discord Notification - Serverless Webhook Forwarder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        main {
+            padding: 40px;
+        }
+
+        section {
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .features {
+            list-style: none;
+        }
+
+        .features li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #666;
+        }
+
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .code-block {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            color: #333;
+        }
+
+        footer {
+            background: #f9f9f9;
+            padding: 20px 40px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            header {
+                padding: 40px 20px;
+            }
+
+            main {
+                padding: 30px 20px;
+            }
+
+            footer {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>☕ Ko-fi Discord Notification</h1>
+            <p class="subtitle">Serverless webhook forwarder for Ko-fi donations to Discord</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>What is this?</h2>
+                <p>
+                    A simple Netlify Function that forwards Ko-fi webhook events to your Discord server.
+                    Receive instant notifications when someone supports you on Ko-fi, automatically delivered
+                    to a Discord channel with beautiful embed messages.
+                </p>
+            </section>
+
+            <section>
+                <h2>Features</h2>
+                <ul class="features">
+                    <li>Instant Discord notifications for Ko-fi donations</li>
+                    <li>Runs serverless on Netlify Functions (free tier available)</li>
+                    <li>Beautiful Discord embeds with donation details</li>
+                    <li>Optional GitHub Gist integration to archive supporters</li>
+                    <li>No database required</li>
+                    <li>Easy one-click deployment</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Quick Start</h2>
+                <p><strong>1. Get your tokens</strong></p>
+                <ul class="features">
+                    <li>Discord Webhook URL (from server settings)</li>
+                    <li>Ko-fi Token (from Ko-fi webhook settings)</li>
+                </ul>
+
+                <p style="margin-top: 20px;"><strong>2. Deploy to Netlify</strong></p>
+                <a href="https://app.netlify.com/start/deploy?repository=https://github.com/raidensakura/kofi-discord-notification" class="cta-button">
+                    Deploy to Netlify
+                </a>
+
+                <p style="margin-top: 20px;"><strong>3. Configure webhook</strong></p>
+                <p>
+                    Add your Netlify Function endpoint to Ko-fi's webhook settings:
+                </p>
+                <div class="code-block">
+                    https://&lt;your-site&gt;.netlify.app/.netlify/functions/kofi
+                </div>
+
+                <p><strong>4. Test it</strong></p>
+                <p>Use Ko-fi's test webhook button to verify the integration works.</p>
+            </section>
+
+            <section>
+                <h2>Environment Variables</h2>
+                <div class="code-block">
+                    WEBHOOK_URL=https://discordapp.com/api/webhooks/...<br>
+                    KOFI_TOKEN=your-ko-fi-token<br>
+                    KOFI_USERNAME=your-ko-fi-username (optional)<br>
+                    GIST_URL=https://gist.github.com/... (optional)<br>
+                    GIST_TOKEN=your-github-token (optional)
+                </div>
+            </section>
+
+            <section>
+                <h2>Need Help?</h2>
+                <div class="links">
+                    <a href="https://github.com/raidensakura/kofi-discord-notification">GitHub Repository</a>
+                    <a href="https://github.com/raidensakura/kofi-discord-notification/issues">Report an Issue</a>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>✨ Built with ☕ Ko-fi and 💜 Discord | Open source on <a href="https://github.com/raidensakura/kofi-discord-notification" style="color: #667eea;">GitHub</a></p>
+        </footer>
+    </div>
+</body>
+</html>
