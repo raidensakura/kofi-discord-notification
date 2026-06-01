@@ -41,37 +41,83 @@ const getGistId = (gistUrl) => {
 
 const buildEmbed = (payload, username) => {
 	const embed = new MessageBuilder();
-	const tierColors = {
-		Silver: '#797979',
-		Gold: '#ffc530',
-		Platinum: '#2ed5ff',
+
+	// Color palette by type
+	const typeColors = {
+		tip: '#9b59b6',
+		subscription: '#16a085',
+		commission: '#e67e22',
+		'shop order': '#2ecc71',
 	};
 
-	// Use GitHub-hosted Ko-fi icon (more reliable than third-party Imgur link)
 	const koFiIcon = 'https://github.githubassets.com/images/modules/site/icons/funding_platforms/ko_fi.svg';
 	embed.setAuthor('Ko-fi', koFiIcon);
 	embed.setThumbnail(koFiIcon);
-	embed.setTitle('New Ko-fi support');
 
+	const typeRaw = safeString(payload.type).toLowerCase();
+	const isPublic = payload.hasOwnProperty('is_public') ? Boolean(payload.is_public) : true;
+	const fromName = isPublic ? (safeString(payload.from_name) || 'Anonymous') : 'Private supporter';
+
+	// Set title and color based on type
+	let title = 'New Ko-fi support';
+	let color = '#34495e';
+
+	if (payload.is_subscription_payment) {
+		color = typeColors.subscription;
+		title = payload.is_first_subscription_payment
+			? '🆕 New membership (first payment)'
+			: '💚 Subscription payment received';
+	} else if (typeRaw.includes('tip')) {
+		color = typeColors.tip;
+		title = '💜 New tip received';
+	} else if (typeRaw.includes('commission')) {
+		color = typeColors.commission;
+		title = '🎨 New commission received';
+	} else if (typeRaw.includes('shop')) {
+		color = typeColors['shop order'];
+		title = '🛍️ New shop order';
+	}
+
+	embed.setTitle(title);
 	if (safeString(username)) {
 		embed.setURL(`https://ko-fi.com/${encodeURIComponent(username)}`);
 	}
+	embed.setColor(color);
 
-	embed.setColor(tierColors[payload.tier_name] || '#9b59b6');
-	embed.addField('From', safeString(payload.from_name) || 'Unknown', true);
+	// Always include basic info
+	embed.addField('From', fromName, true);
 	embed.addField('Type', safeString(payload.type) || 'Unknown', true);
 	embed.addField('Amount', `${safeString(payload.amount) || '0'} ${safeString(payload.currency) || ''}`.trim(), true);
 
-	if (safeString(payload.tier_name)) {
-		embed.addField('Tier', payload.tier_name, true);
+	// Subscription fields
+	if (payload.is_subscription_payment) {
+		if (safeString(payload.tier_name)) {
+			embed.addField('Tier', `${payload.tier_name}`, true);
+		}
+		embed.addField('Status', payload.is_first_subscription_payment ? 'Welcome! 🎉' : 'Monthly', true);
 	}
 
+	// Shop order items
+	if (Array.isArray(payload.shop_items) && payload.shop_items.length > 0) {
+		const itemsList = payload.shop_items.map((item) => {
+			const name = safeString(item.direct_link_code ? `${item.direct_link_code}` : item.name || 'Item');
+			const qty = item.quantity || 1;
+			return `• ${name} (x${qty})`;
+		}).join('\n');
+		embed.addField('Items', itemsList, false);
+	}
+
+	// Message field (respect privacy)
 	const message = safeString(payload.message);
-	if (message && message.toLowerCase() !== 'null') {
-		embed.addField('Message', message);
+	if (isPublic && message && message.toLowerCase() !== 'null') {
+		embed.addField('Message', `"${message}"`);
+	} else if (!isPublic && message) {
+		embed.addField('Message', '🔒 Private message');
 	}
 
-	embed.setFooter('Thank you for supporting us!', 'https://github.githubassets.com/images/modules/site/icons/funding_platforms/ko_fi.svg');
+	// Footer with message ID for tracing
+	const footerText = payload.message_id ? `ID: ${payload.message_id}` : 'Ko-fi notification';
+	embed.setFooter(`Thank you for supporting us! • ${footerText}`, koFiIcon);
 	embed.setTimestamp();
 
 	return embed;
