@@ -94,11 +94,23 @@ exports.handler = async (event) => {
 		return jsonResponse({ success: false, error: 'Missing KOFI_TOKEN.' }, 500);
 	}
 
+	// Parse form-encoded body from Ko-fi
 	let body;
-	try {
-		body = JSON.parse(event.body || '{}');
-	} catch (error) {
-		return jsonResponse({ success: false, error: 'Request body is not valid JSON.' }, 400);
+	const contentType = event.headers['content-type'] || '';
+
+	if (contentType.includes('application/x-www-form-urlencoded')) {
+		// Parse URL-encoded form data
+		const params = new URLSearchParams(event.body);
+		body = {
+			data: params.get('data'),
+		};
+	} else {
+		// Fallback to JSON parsing
+		try {
+			body = JSON.parse(event.body || '{}');
+		} catch (error) {
+			return jsonResponse({ success: false, error: 'Request body is not valid.' }, 400);
+		}
 	}
 
 	if (!body.data) {
