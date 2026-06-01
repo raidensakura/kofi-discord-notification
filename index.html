@@ -279,7 +279,7 @@ KOFI_TOKEN=your-ko-fi-token
                 <p>
                     Go to <a href="https://ko-fi.com/manage/webhooks" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; font-weight: 600;">Ko-fi webhook settings</a> and add this URL:
                 </p>
-                <div class="code-block">
+                <div class="code-block" id="webhook-url-block">
 https://&lt;your-site&gt;.netlify.app/.netlify/functions/kofi
                 </div>
 
@@ -311,5 +311,27 @@ GIST_TOKEN=GitHub token for Gist updates (optional)
             <p>Built with ☕ for Ko-fi supporters | <a href="https://github.com/raidensakura/kofi-discord-notification">Open source</a> • MIT License</p>
         </footer>
     </div>
+
+    <script>
+        // Auto-detect and display the webhook URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const webhookBlock = document.getElementById('webhook-url-block');
+            if (webhookBlock) {
+                const host = window.location.hostname;
+                const protocol = window.location.protocol;
+                
+                // If running on netlify.app domain, show the actual URL
+                if (host.includes('netlify.app')) {
+                    webhookBlock.textContent = `${protocol}//${host}/.netlify/functions/kofi`;
+                } else if (host === 'localhost' || host.includes('127.0.0.1')) {
+                    // Local development
+                    webhookBlock.textContent = 'http://localhost:8888/.netlify/functions/kofi';
+                } else {
+                    // Custom domain
+                    webhookBlock.textContent = `${protocol}//${host}/.netlify/functions/kofi`;
+                }
+            }
+        });
+    </script>
 </body>
 </html>
